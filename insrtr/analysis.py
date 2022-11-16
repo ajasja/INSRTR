@@ -5,16 +5,22 @@ Module to analyze the loops
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
     """
-    Returns a list of loop indices (looks for LLL in the string)
+    Returns a list of list of loop indices (looks for `loop_char` in the string)
 
     Parameters
     ----------
     annot : str
-        Annotation containg L
+        String containing annotation of secondary structure
     min_length : int, optional
-        _description_, by default 2
+       Minimum length to pick up as loop. At least `min_length` residues must be present.
     skip_ends : bool, optional
-        _description_, by default True
+        Do not include "loops" at the end, by default True
+    loop_char : str, optional
+        What does the loop char look like, by default "L"
+
+    Returns
+    -------
+    list of list of list indices
     """
 
     in_loop = False
@@ -48,6 +54,6 @@ def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_cha
 
     # filter on min size
     if min_length > 0:
-        loops = [loop for loop in loops if len(loop) > min_length]
+        loops = [loop for loop in loops if len(loop) >= min_length]
 
     return loops
