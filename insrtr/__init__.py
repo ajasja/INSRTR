@@ -7,3 +7,4 @@ __version__ = '0.1.0'
 
 from .ccs import COILED_COILS, LINKERS
 from .main import *
+from .analysis import * # is this best practice?
