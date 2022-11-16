@@ -57,3 +57,14 @@ def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_cha
         loops = [loop for loop in loops if len(loop) >= min_length]
 
     return loops
+
+def loops_to_0_based(loops):
+    import copy
+    # must make copy so results are nt modified in place
+    res = copy.deepcopy(loops)
+
+    for x in range(len(res)):
+        for i in range(len(res[x])):
+            res[x][i] = res[x][i]-1
+            assert res[x][i]>0, "0 based indexing can not be less than 0"
+    return res
