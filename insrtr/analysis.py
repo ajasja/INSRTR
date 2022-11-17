@@ -58,13 +58,60 @@ def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_cha
 
     return loops
 
+
 def loops_to_0_based(loops):
+    """Decrements a list of lists. Returns a deep copy"""
     import copy
+
     # must make copy so results are nt modified in place
     res = copy.deepcopy(loops)
 
     for x in range(len(res)):
         for i in range(len(res[x])):
-            res[x][i] = res[x][i]-1
-            assert res[x][i]>0, "0 based indexing can not be less than 0"
+            res[x][i] = res[x][i] - 1
+            assert res[x][i] > 0, "0 based indexing can not be less than 0"
     return res
+
+import mdtraj as md
+class LoopAnalyzer:
+    def __init__(self, struct_file_path):
+        self.struct_file_path = struct_file_path
+
+        self.traj = md.load(struct_file_path)
+        self.topology = self.traj.topology
+        self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
+        self.loops = get_loops_from_annotation(self.dssp, loop_char='C', skip_ends=True)
+        self.loops0 = loops_to_0_based(self.loops)
+        self.full_sasa =  md.shrake_rupley(self.traj)[0]
+
+    _loop_features = []
+    _resi_features = []
+
+
+
+    def analyze_structure(self):
+        """Analyze the structure"""
+
+        self.get_loop_features()
+
+        self.get_resi_features()
+
+    def get_loop_features(self):
+        self._loop_features = []
+        for li, loop  in enumerate(self.loops0):
+            self._loop_features.append({}) # make new dict
+            for loop_analyzer in self._loop_analyzers:
+                res = loop_analyzer(self, li)
+                self._loop_features[li].update(res)
+
+
+
+    def get_resi_features(self):
+        pass
+
+    def get_loop_sasa(self, loop_index0):
+        print(f'Hi {loop_index0}')
+        return(dict(test=1))
+
+
+    _loop_analyzers = [get_loop_sasa]
