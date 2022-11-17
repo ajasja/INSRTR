@@ -72,7 +72,10 @@ def loops_to_0_based(loops):
             assert res[x][i] > 0, "0 based indexing can not be less than 0"
     return res
 
+
 import mdtraj as md
+
+
 class LoopAnalyzer:
     def __init__(self, struct_file_path):
         self.struct_file_path = struct_file_path
@@ -80,14 +83,13 @@ class LoopAnalyzer:
         self.traj = md.load(struct_file_path)
         self.topology = self.traj.topology
         self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
-        self.loops = get_loops_from_annotation(self.dssp, loop_char='C', skip_ends=True)
+        self.loops = get_loops_from_annotation(self.dssp, loop_char="C", skip_ends=True)
         self.loops0 = loops_to_0_based(self.loops)
-        self.full_sasa =  md.shrake_rupley(self.traj)[0]
+        self.sasa_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
+        self.total_sasa_A = sum(self.sasa_A)
 
     _loop_features = []
     _resi_features = []
-
-
 
     def analyze_structure(self):
         """Analyze the structure"""
@@ -98,20 +100,35 @@ class LoopAnalyzer:
 
     def get_loop_features(self):
         self._loop_features = []
-        for li, loop  in enumerate(self.loops0):
-            self._loop_features.append({}) # make new dict
+        for li, loop in enumerate(self.loops0):
+            self._loop_features.append(dict(loop_index0=li, loop_length_AA=len(loop)))  # make new dict
             for loop_analyzer in self._loop_analyzers:
                 res = loop_analyzer(self, li)
                 self._loop_features[li].update(res)
-
-
 
     def get_resi_features(self):
         pass
 
     def get_loop_sasa(self, loop_index0):
-        print(f'Hi {loop_index0}')
-        return(dict(test=1))
+        """Returns loop sasa , loop sasa in isoloation and relative loop sasa"""
+        loop_residues = self.loops0[loop_index0]
 
+        loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]}")
+
+        loop_sasa_A = sum(self.sasa_A[loop_ids])  # get sasa just for loop
+        loop_sasa_A_per_res = loop_sasa_A / len(loop_residues)
+
+        # get SASA if the loop was on it's own, without the rest of the protein
+        loop_isolation_traj = self.traj.atom_slice(loop_ids)
+        loop_isolation_SASA_A = sum(md.shrake_rupley(loop_isolation_traj)[0] * 100)  # make in in angstrom
+        loop_burial_percent = loop_sasa_A/loop_isolation_SASA_A*100
+
+        # print(f'Hi {loop_sasa_A}')
+        return dict(
+            loop_sasa_A=loop_sasa_A,
+            loop_sasa_A_per_res=loop_sasa_A_per_res,
+            loop_isolation_SASA_A=loop_isolation_SASA_A,
+            loop_burial_percent=loop_burial_percent
+        )
 
     _loop_analyzers = [get_loop_sasa]
