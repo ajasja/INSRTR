@@ -111,14 +111,21 @@ class LoopAnalyzer:
 
     def get_loop_geometry(self, loop_index0):
         loop_residues = self.loops0[loop_index0]
+        loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]}")
+        loop_isolation_traj = self.traj.atom_slice(loop_ids)
+
         first_CA = self.topology.select(f"resid {loop_residues[0]} and name CA")[0]
         last_CA =  self.topology.select(f"resid {loop_residues[-1]} and name CA")[0]
         # returns a set of frames, but we only have one frame, so [0] is needed 
         loop_start_end_distance_A =  md.compute_distances(self.traj, [[first_CA, last_CA]] )[0][0]*10  
 
+        loop_radius_gyration_A = md.compute_rg(loop_isolation_traj)[0]*10
 
+        #TODO: calculate distance to active site
+        
         return dict(
-            loop_start_end_distance_A=loop_start_end_distance_A
+            loop_start_end_distance_A=loop_start_end_distance_A,
+            loop_radius_gyration_A=loop_radius_gyration_A
         )
 
     def get_loop_sasa(self, loop_index0):
