@@ -109,6 +109,18 @@ class LoopAnalyzer:
     def get_resi_features(self):
         pass
 
+    def get_loop_geometry(self, loop_index0):
+        loop_residues = self.loops0[loop_index0]
+        first_CA = self.topology.select(f"resid {loop_residues[0]} and name CA")[0]
+        last_CA =  self.topology.select(f"resid {loop_residues[-1]} and name CA")[0]
+        # returns a set of frames, but we only have one frame, so [0] is needed 
+        loop_start_end_distance_A =  md.compute_distances(self.traj, [[first_CA, last_CA]] )[0][0]*10  
+
+
+        return dict(
+            loop_start_end_distance_A=loop_start_end_distance_A
+        )
+
     def get_loop_sasa(self, loop_index0):
         """Returns loop sasa , loop sasa in isoloation and relative loop sasa"""
         loop_residues = self.loops0[loop_index0]
@@ -131,4 +143,4 @@ class LoopAnalyzer:
             loop_burial_percent=loop_burial_percent
         )
 
-    _loop_analyzers = [get_loop_sasa]
+    _loop_analyzers = [get_loop_geometry, get_loop_sasa]
