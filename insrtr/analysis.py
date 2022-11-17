@@ -122,7 +122,7 @@ class LoopAnalyzer:
         loop_radius_gyration_A = md.compute_rg(loop_isolation_traj)[0]*10
 
         #TODO: calculate distance to active site
-        
+
         return dict(
             loop_start_end_distance_A=loop_start_end_distance_A,
             loop_radius_gyration_A=loop_radius_gyration_A
@@ -141,13 +141,14 @@ class LoopAnalyzer:
         loop_isolation_traj = self.traj.atom_slice(loop_ids)
         loop_isolation_SASA_A = sum(md.shrake_rupley(loop_isolation_traj)[0] * 100)  # make in in angstrom
         loop_burial_percent = loop_sasa_A/loop_isolation_SASA_A*100
-
-        # print(f'Hi {loop_sasa_A}')
+        loop_percent_of_total_surface = loop_sasa_A/self.total_sasa_A*100
+       
         return dict(
             loop_sasa_A=loop_sasa_A,
             loop_sasa_A_per_res=loop_sasa_A_per_res,
             loop_isolation_SASA_A=loop_isolation_SASA_A,
-            loop_burial_percent=loop_burial_percent
+            loop_burial_percent=loop_burial_percent,
+            loop_percent_of_total_surface=loop_percent_of_total_surface
         )
 
     _loop_analyzers = [get_loop_geometry, get_loop_sasa]
