@@ -1,7 +1,7 @@
 """
 Module to analyze the loops
 """
-
+from .utils import *
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
     """
@@ -120,7 +120,7 @@ class LoopAnalyzer:
         loop_start_end_distance_A =  md.compute_distances(self.traj, [[first_CA, last_CA]] )[0][0]*10  
 
         loop_radius_gyration_A = md.compute_rg(loop_isolation_traj)[0]*10
-
+        
         #TODO: calculate distance to active site
 
         return dict(
@@ -128,8 +128,31 @@ class LoopAnalyzer:
             loop_radius_gyration_A=loop_radius_gyration_A
         )
 
+    def get_loop_sequence_features(self, loop_index0):
+        """Returns sequence features, such as percent """
+        loop_residues = self.loops0[loop_index0]
+        #loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]} and name CA")
+        
+        #get three letter names
+        seq = resname_3to1([self.topology.residue(lid).name for lid in loop_residues])
+        seq = "".join(seq)
+
+        ll = len(seq)
+        loop_G_percent = seq.count('G')/ll*100
+        loop_P_percent = seq.count('P')/ll*100
+        loop_S_percent = seq.count('S')/ll*100
+        loop_T_percent = seq.count('T')/ll*100
+        return dict(
+            loop_seq=seq,
+            loop_G_percent=loop_G_percent,
+            loop_P_percent=loop_P_percent,
+            loop_S_percent=loop_S_percent,
+            loop_T_percent=loop_T_percent,
+        )        
+
+
     def get_loop_sasa(self, loop_index0):
-        """Returns loop sasa , loop sasa in isoloation and relative loop sasa"""
+        """Returns loop sasa , loop sasa in isolation and relative loop sasa"""
         loop_residues = self.loops0[loop_index0]
 
         loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]}")
@@ -151,4 +174,4 @@ class LoopAnalyzer:
             loop_percent_of_total_surface=loop_percent_of_total_surface
         )
 
-    _loop_analyzers = [get_loop_geometry, get_loop_sasa]
+    _loop_analyzers = [get_loop_geometry, get_loop_sasa, get_loop_sequence_features]
