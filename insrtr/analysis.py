@@ -89,6 +89,7 @@ class LoopAnalyzer:
         self.total_sasa_A = sum(self.sasa_A)
 
     _loop_features = []
+    loop_feature_descriptions = {}
     _resi_features = []
 
     def analyze_structure(self):
@@ -102,9 +103,16 @@ class LoopAnalyzer:
         self._loop_features = []
         for li, loop in enumerate(self.loops0):
             self._loop_features.append(dict(loop_index0=li, loop_length_AA=len(loop)))  # make new dict
+            if li==0: #description need to be added on first pass only
+                self.loop_feature_descriptions['loop_index0']="The zero based index of the loop."
+                self.loop_feature_descriptions['loop_index0']="The length of the loop."
             for loop_analyzer in self._loop_analyzers:
                 res = loop_analyzer(self, li)
-                self._loop_features[li].update(res)
+                for f in res.keys():
+                    # add the values and descriptions to different lists
+                    self._loop_features[li][f]=res[f][0]
+                    if li==0: # add the description if this is the first loop pass
+                       self.loop_feature_descriptions[f]=res[f][1]
 
     def get_resi_features(self):
         pass
@@ -124,8 +132,8 @@ class LoopAnalyzer:
         #TODO: calculate distance to active site
 
         return dict(
-            loop_start_end_distance_A=loop_start_end_distance_A,
-            loop_radius_gyration_A=loop_radius_gyration_A
+            loop_start_end_distance_A=(loop_start_end_distance_A, "Distance between the CA atom of the first loop residue and CA atom of last loop residue."),
+            loop_radius_gyration_A=(loop_radius_gyration_A, "Radius of Gyration of the loop residues.")
         )
 
     def get_loop_sequence_features(self, loop_index0):
@@ -143,11 +151,11 @@ class LoopAnalyzer:
         loop_S_percent = seq.count('S')/ll*100
         loop_T_percent = seq.count('T')/ll*100
         return dict(
-            loop_seq=seq,
-            loop_G_percent=loop_G_percent,
-            loop_P_percent=loop_P_percent,
-            loop_S_percent=loop_S_percent,
-            loop_T_percent=loop_T_percent,
+            loop_seq=(seq, "Aminoacid sequence of the loop in one letter code."),
+            loop_G_percent=(loop_G_percent, "Percent og Glycine residues in loop."),
+            loop_P_percent=(loop_P_percent, "Percent of Proline residues in loop."),
+            loop_S_percent=(loop_S_percent, "Percent of Serine residues in loop."),
+            loop_T_percent=(loop_T_percent, "Percent of Threonine residues in loop."),
         )        
 
 
@@ -163,15 +171,15 @@ class LoopAnalyzer:
         # get SASA if the loop was on it's own, without the rest of the protein
         loop_isolation_traj = self.traj.atom_slice(loop_ids)
         loop_isolation_SASA_A = sum(md.shrake_rupley(loop_isolation_traj)[0] * 100)  # make in in angstrom
-        loop_burial_percent = loop_sasa_A/loop_isolation_SASA_A*100
+        loop_burial_percent = (1-loop_sasa_A/loop_isolation_SASA_A)*100
         loop_percent_of_total_surface = loop_sasa_A/self.total_sasa_A*100
        
         return dict(
-            loop_sasa_A=loop_sasa_A,
-            loop_sasa_A_per_res=loop_sasa_A_per_res,
-            loop_isolation_SASA_A=loop_isolation_SASA_A,
-            loop_burial_percent=loop_burial_percent,
-            loop_percent_of_total_surface=loop_percent_of_total_surface
+            loop_sasa_A=(loop_sasa_A, "Surface accessible area of loop in A**2"),
+            loop_sasa_A_per_res=(loop_sasa_A_per_res,"Surface accessible area divided by number of residues of loop in A**2"),
+            loop_isolation_SASA_A=(loop_isolation_SASA_A, "Surface accessible area of loop without the rest of the protein in A**2"),
+            loop_burial_percent=(loop_burial_percent, "1-SASA/SASA_isolation, i.e. the percent of the loop surface covered by the rest of the protein"),
+            loop_percent_of_total_surface=(loop_percent_of_total_surface, "SASA/SASA_of_whole_protein, i.e. how big is the loop relative to the rest of the protein")
         )
 
     _loop_analyzers = [get_loop_geometry, get_loop_sasa, get_loop_sequence_features]
