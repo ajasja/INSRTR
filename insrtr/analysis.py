@@ -92,6 +92,7 @@ class LoopAnalyzer:
     _loop_features = []
     loop_feature_descriptions = {}
     _resi_features = []
+    resi_feature_descriptions = {}
 
     def analyze_structure(self):
         """Analyze the structure"""
@@ -106,7 +107,7 @@ class LoopAnalyzer:
             self._loop_features.append(dict(loop_index0=li, loop_length_AA=len(loop)))  # make new dict
             if li == 0:  # description need to be added on first pass only
                 self.loop_feature_descriptions["loop_index0"] = "The zero based index of the loop."
-                self.loop_feature_descriptions["loop_index0"] = "The length of the loop."
+                self.loop_feature_descriptions["loop_length_AA"] = "The length of the loop."
             for loop_analyzer in self._loop_analyzers:
                 res = loop_analyzer(self, li)
                 for f in res.keys():
