@@ -2,6 +2,7 @@
 Module to analyze the loops
 """
 from .utils import *
+import numpy as np
 
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
@@ -75,6 +76,7 @@ def loops_to_0_based(loops):
 
 
 import mdtraj as md
+import pandas as pd
 
 
 class LoopAnalyzer:
@@ -84,10 +86,12 @@ class LoopAnalyzer:
         self.traj = md.load(struct_file_path)
         self.topology = self.traj.topology
         self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
-        self.loops = get_loops_from_annotation(self.dssp, loop_char="C", skip_ends=True)
+        self.dssp = np.char.replace(self.dssp,'C','L')
+        self.seq = "".join(resname_3to1([res.name for res in self.topology.residues]))
+        self.loops = get_loops_from_annotation(self.dssp, loop_char="L", skip_ends=True)
         self.loops0 = loops_to_0_based(self.loops)
-        self.sasa_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
-        self.total_sasa_A = sum(self.sasa_A)
+        self.sasa_atoms_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
+        self.total_sasa_A = sum(self.sasa_atoms_A)
 
     _loop_features = []
     loop_feature_descriptions = {}
@@ -100,6 +104,8 @@ class LoopAnalyzer:
         self.get_loop_features()
 
         self.get_resi_features()
+
+
 
     def get_loop_features(self):
         self._loop_features = []
@@ -166,7 +172,7 @@ class LoopAnalyzer:
 
         loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]}")
 
-        loop_sasa_A = sum(self.sasa_A[loop_ids])  # get sasa just for loop
+        loop_sasa_A = sum(self.sasa_atoms_A[loop_ids])  # get sasa just for loop
         loop_sasa_A_per_res = loop_sasa_A / len(loop_residues)
 
         # get SASA if the loop was on it's own, without the rest of the protein
@@ -229,11 +235,66 @@ class LoopAnalyzer:
             resi_distance_to_N_term_A=(resi_distance_to_N_term_A, "distance of residue CA atom to start of loop (N_term first residue of loop) in Angstrom"),
             resi_distance_to_C_term_A=(
                 resi_distance_to_C_term_A,
-                "distance of residue CA atom to end of loop (C_term last residue of loop) in Angstrom"),
+                "distance of residue CA atom to end of loop (C_term last residue of loop) in Angstrom")
         )
+
     def get_resi_seq_features(self, loop_index0, resi_loop_index0, loop_residues):
         resi_index0 = loop_residues[resi_loop_index0]
 
+        prev_resi_index0 = resi_index0-1
+        next_resi_index0 = resi_index0+1
+
         
-    _resi_analyzers = [get_resi_geometry]
+        resi_type = self.seq[resi_index0]
+        resi_dssp = self.dssp[resi_index0]
+
+        if prev_resi_index0 >= 0:   
+            prev_resi_type = self.seq[prev_resi_index0]
+            prev_resi_dssp = self.dssp[prev_resi_index0]
+
+        if next_resi_index0 < self.topology.n_residues: 
+            next_resi_type = self.seq[next_resi_index0]
+            next_resi_dssp = self.dssp[next_resi_index0]
+    
+        return dict(
+            resi_type=(resi_type, "Residue type"),
+            resi_dssp=(resi_dssp, "Residue secondary structure"),
+            prev_resi_type=(prev_resi_type, "Type of previous residue"),
+            prev_resi_dssp=(prev_resi_dssp, "Secondary structure of previous residue"),
+            next_resi_type=(next_resi_type, "Type of next residue"),
+            next_resi_dssp=(next_resi_dssp, "Secondary structure of next residue")
+        )
+
+    def get_resi_sasa(self, loop_index0, resi_loop_index0, loop_residues):
+        resi_index0 = loop_residues[resi_loop_index0]
+
+        resi_atoms = self.topology.select(f"resid {resi_index0}")
+
+        resi_sasa_A = sum(self.sasa_atoms_A[resi_atoms])  # get sasa just for residue
+        
+
+        # get SASA if residue  was on it's own, without the rest of the protein
+        resi_isolation_traj = self.traj.atom_slice(resi_atoms)
+        resi_isolation_SASA_A = sum(md.shrake_rupley(resi_isolation_traj)[0] * 100)  # make in in angstrom
+        resi_burial_percent = (1 - resi_sasa_A / resi_isolation_SASA_A) * 100
+        resi_percent_of_total_surface = resi_sasa_A /self.total_sasa_A* 100
+
+        return dict(
+            resi_sasa_A=(resi_sasa_A, "Surface accessible area of residue in A**2 in the context of the protein"),
+            resi_isolation_SASA_A=(
+                resi_isolation_SASA_A,
+                "Surface accessible area of residue in A**2 in in isolation",
+            ),
+            resi_burial_percent=(
+                resi_burial_percent,
+                "1-SASA_residue/SASA_residue_isolation, i.e. the percent of the residue surface covered by the rest of the protein",
+            ),
+            resi_percent_of_total_surface=(
+                resi_percent_of_total_surface,
+                "SAS_resi/SASA_of_whole_protein, i.e. how big is the residue is relative to the rest of the protein",
+            ),
+        )
+
+
+    _resi_analyzers = [get_resi_geometry, get_resi_seq_features, get_resi_sasa]
     
