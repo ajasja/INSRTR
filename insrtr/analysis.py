@@ -92,6 +92,7 @@ class LoopAnalyzer:
         self.loops0 = loops_to_0_based(self.loops)
         self.sasa_atoms_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
         self.total_sasa_A = sum(self.sasa_atoms_A)
+        self.residue_features_table = None
 
     _loop_features = []
     loop_feature_descriptions = {}
@@ -105,6 +106,11 @@ class LoopAnalyzer:
 
         self.get_resi_features()
 
+        resi_table=pd.DataFrame(self._resi_features)
+        loop_table=pd.DataFrame(self._loop_features)
+        self.residue_features_table=resi_table.merge(loop_table, on='loop_index0', how='left')
+
+        return self.residue_features_table
 
 
     def get_loop_features(self):
