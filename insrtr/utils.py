@@ -9,6 +9,5 @@ resname_3to1_dict = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K',
 
 def resname_3to1(resname3: list) -> str:
     """Takes an array of 3 letter names and returns one letter names"""
-    #TODO: check for unknown residues
-    result = [resname_3to1_dict[resname] for resname in resname3]
+    result = [resname_3to1_dict[resname] if resname in resname_3to1_dict else 'X' for resname in resname3]
     return result
