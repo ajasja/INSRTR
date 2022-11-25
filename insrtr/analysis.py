@@ -116,9 +116,6 @@ class LoopAnalyzer:
                     if li == 0:  # add the description if this is the first loop pass
                         self.loop_feature_descriptions[f] = res[f][1]
 
-    def get_resi_features(self):
-        pass
-
     def get_loop_geometry(self, loop_index0):
         loop_residues = self.loops0[loop_index0]
         loop_ids = self.topology.select(f"resid {loop_residues[0]} to {loop_residues[-1]}")
@@ -199,3 +196,44 @@ class LoopAnalyzer:
         )
 
     _loop_analyzers = [get_loop_geometry, get_loop_sasa, get_loop_sequence_features]
+
+    def get_resi_features(self):
+        self._resi_features = []
+        for li, loop in enumerate(self.loops0):
+            for ri, resi in enumerate(loop):
+                self._resi_features.append(dict(resi_loop_index0=ri, loop_index0=li, resi_index0=resi))  # make new dict
+                if li == 0 and ri == 0:  # description need to be added on first pass only
+                    self.loop_feature_descriptions["resi_index0"] = "The zero based index of the residue."
+                    self.loop_feature_descriptions["resi_loop_index0"] = "The zero based index of the residue inside the loop."
+                    self.loop_feature_descriptions["loop_index0"] = "The zero based index of the loop."
+
+                
+                for resi_analyzer in self._resi_analyzers:
+                    res = resi_analyzer(self, li, ri, loop)
+                    for f in res.keys():
+                        # Add the values and descriptions to different lists
+                        # Append to the last 
+                        self._resi_features[-1][f] = res[f][0]
+                        if ri == 0:  # add the description if this is the first loop pass
+                            self.loop_feature_descriptions[f] = res[f][1]
+
+    def get_resi_geometry(self, loop_index0, resi_loop_index0, loop_residues):
+        first_CA = self.topology.select(f"resid {loop_residues[0]} and name CA")[0]
+        last_CA = self.topology.select(f"resid {loop_residues[-1]} and name CA")[0]
+        residue_CA = self.topology.select(f"resid {loop_residues[resi_loop_index0]} and name CA")[0]
+        # returns a set of frames, but we only have one frame, so [0] is needed
+        resi_distance_to_N_term_A = md.compute_distances(self.traj, [[first_CA, residue_CA]])[0][0] * 10
+        resi_distance_to_C_term_A = md.compute_distances(self.traj, [[last_CA, residue_CA]])[0][0] * 10
+        
+        return dict(
+            resi_distance_to_N_term_A=(resi_distance_to_N_term_A, "distance of residue CA atom to start of loop (N_term first residue of loop) in Angstrom"),
+            resi_distance_to_C_term_A=(
+                resi_distance_to_C_term_A,
+                "distance of residue CA atom to end of loop (C_term last residue of loop) in Angstrom"),
+        )
+    def get_resi_seq_features(self, loop_index0, resi_loop_index0, loop_residues):
+        resi_index0 = loop_residues[resi_loop_index0]
+
+        
+    _resi_analyzers = [get_resi_geometry]
+    
