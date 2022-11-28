@@ -98,6 +98,7 @@ class LoopAnalyzer:
     loop_feature_descriptions = {}
     _resi_features = []
     resi_feature_descriptions = {}
+    feature_descriptions_table = None
 
     def analyze_structure(self):
         """Analyze the structure"""
@@ -109,6 +110,13 @@ class LoopAnalyzer:
         resi_table=pd.DataFrame(self._resi_features)
         loop_table=pd.DataFrame(self._loop_features)
         self.residue_features_table=resi_table.merge(loop_table, on='loop_index0', how='left')
+        
+        # Merge the descriptions as well
+        self.feature_descriptions_table = self.resi_feature_descriptions.copy()
+        self.feature_descriptions_table.update(self.loop_feature_descriptions)
+        self.feature_descriptions_table=pd.DataFrame(self.feature_descriptions_table, index=['description'])
+        self.feature_descriptions_table=self.feature_descriptions_table.T
+
 
         return self.residue_features_table
 
