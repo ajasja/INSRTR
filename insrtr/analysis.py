@@ -338,7 +338,7 @@ class LoopAnalyzer:
         dists_A = md.compute_distances(self.traj, pairs)[0] * 10
         return dists_A
 
-    def get_active_res_info(self, loop_index0, resi_loop_index0, loop_residues):
+    def get_active_geometry_res_info(self, loop_index0, resi_loop_index0, loop_residues):
         if not self.active_res_index0:
             return dict()
         resi_index0 = loop_residues[resi_loop_index0]
@@ -362,4 +362,36 @@ class LoopAnalyzer:
             ),
         )
 
-    _resi_analyzers = [get_resi_geometry, get_resi_seq_features, get_resi_sasa, get_active_res_info]
+    def get_active_seq_res_info(self, loop_index0, resi_loop_index0, loop_residues):
+        if not self.active_res_index0:
+            return dict()
+        resi_index0 = loop_residues[resi_loop_index0]
+        seq_dist = []
+        for target in self.active_res_index0:
+            seq_dist.append(abs(resi_index0 - target))
+
+        resi_active_site_seq_dist_min = np.min(seq_dist)
+        resi_active_site_seq_dist_avg = np.average(seq_dist)
+        resi_active_site_seq_dist_max = np.min(seq_dist)
+        return dict(
+            resi_active_site_seq_dist_min=(
+                resi_active_site_seq_dist_min,
+                "Minimum distance (in number of residues) to one of the active site residues.",
+            ),
+            resi_active_site_seq_dist_avg=(
+                resi_active_site_seq_dist_avg,
+                "Average distance (in number of residues) to active site residues.",
+            ),
+            resi_active_site_seq_dist_max=(
+                resi_active_site_seq_dist_max,
+                "Maximum distance (in number of residues) to one of the active site residues.",
+            ),
+        )
+
+    _resi_analyzers = [
+        get_resi_geometry,
+        get_resi_seq_features,
+        get_resi_sasa,
+        get_active_geometry_res_info,
+        get_active_seq_res_info
+    ]
