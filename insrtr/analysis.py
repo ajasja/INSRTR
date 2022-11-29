@@ -3,6 +3,7 @@ Module to analyze the loops
 """
 from .utils import *
 import numpy as np
+import pathlib
 
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
@@ -80,9 +81,13 @@ import pandas as pd
 
 
 class LoopAnalyzer:
-    def __init__(self, struct_file_path):
+    def __init__(self, struct_file_path, struct_name=None):
         self.struct_file_path = struct_file_path
 
+        if struct_name is None: #If no name given take it from the struct file
+            struct_name = pathlib.Path(struct_file_path).stem
+
+        self.struct_name = str(struct_name)
         self.traj = md.load(struct_file_path)
         self.topology = self.traj.topology
         self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
@@ -221,11 +226,12 @@ class LoopAnalyzer:
         self._resi_features = []
         for li, loop in enumerate(self.loops0):
             for ri, resi in enumerate(loop):
-                self._resi_features.append(dict(resi_loop_index0=ri, loop_index0=li, resi_index0=resi))  # make new dict
+                self._resi_features.append(dict(struct_name=self.struct_name, resi_loop_index0=ri, loop_index0=li, resi_index0=resi))  # make new dict
                 if li == 0 and ri == 0:  # description need to be added on first pass only
-                    self.loop_feature_descriptions["resi_index0"] = "The zero based index of the residue."
-                    self.loop_feature_descriptions["resi_loop_index0"] = "The zero based index of the residue inside the loop."
-                    self.loop_feature_descriptions["loop_index0"] = "The zero based index of the loop."
+                    self.resi_feature_descriptions["struct_name"] = "Name of the structure"
+                    self.resi_feature_descriptions["resi_index0"] = "The zero based index of the residue."
+                    self.resi_feature_descriptions["resi_loop_index0"] = "The zero based index of the residue inside the loop."
+                    self.resi_feature_descriptions["loop_index0"] = "The zero based index of the loop."
 
                 
                 for resi_analyzer in self._resi_analyzers:
@@ -235,7 +241,7 @@ class LoopAnalyzer:
                         # Append to the last 
                         self._resi_features[-1][f] = res[f][0]
                         if ri == 0:  # add the description if this is the first loop pass
-                            self.loop_feature_descriptions[f] = res[f][1]
+                            self.resi_feature_descriptions[f] = res[f][1]
 
     def get_resi_geometry(self, loop_index0, resi_loop_index0, loop_residues):
         first_CA = self.topology.select(f"resid {loop_residues[0]} and name CA")[0]
