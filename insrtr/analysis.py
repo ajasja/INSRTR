@@ -4,6 +4,8 @@ Module to analyze the loops
 from .utils import *
 import numpy as np
 import pathlib
+from collections import Counter
+import pandas as pd
 
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
@@ -373,6 +375,7 @@ class LoopAnalyzer:
         resi_active_site_seq_dist_min = np.min(seq_dist)
         resi_active_site_seq_dist_avg = np.average(seq_dist)
         resi_active_site_seq_dist_max = np.min(seq_dist)
+
         return dict(
             resi_active_site_seq_dist_min=(
                 resi_active_site_seq_dist_min,
@@ -388,10 +391,64 @@ class LoopAnalyzer:
             ),
         )
 
+    def get_resi_active_site_dssp_info(self, loop_index0, resi_loop_index0, loop_residues):
+        if not self.active_res_index0:
+            return dict()
+        resi_index0 = loop_residues[resi_loop_index0]
+        counts = []
+        #dssps = []
+        for target in self.active_res_index0:
+            start, end = sorted((target, resi_index0))
+            dssp_subset = self.dssp[start+1:end]
+            #dssps.append()
+            counter = Counter(dssp_subset,  H=0, L=0, E=0) #init counts to 0
+            counts.append(counter)
+
+        cdf = pd.DataFrame(counts)
+
+
+        return dict(
+            resi_active_site_num_H_min=(
+                cdf.H.min(),
+                "Minimum number of helical residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_H_avg=(
+                cdf.H.mean(),
+                "Average number of helical residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_H_max=(
+                cdf.H.max(),
+                "Maximum number of helical residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_E_min=(
+                cdf.E.min(),
+                "Minimum number of extended (beta) residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_E_avg=(
+                cdf.E.mean(),
+                "Average number of extended (beta) residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_E_max=(
+                cdf.E.max(),
+                "Maximum number of extended (beta) residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_L_min=(
+                cdf.L.min(),
+                "Minimum number of loop residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_L_avg=(
+                cdf.L.mean(),
+                "Average number of loop residues between this residue and one of the active site residues,",
+            ),
+            resi_active_site_num_L_max=(
+                cdf.L.max(),
+                "Maximum number of loop residues between this residue and one of the active site residues,",
+            ),
+        )
     _resi_analyzers = [
         get_resi_geometry,
         get_resi_seq_features,
         get_resi_sasa,
         get_active_geometry_res_info,
-        get_active_seq_res_info
+        get_active_seq_res_info, get_resi_active_site_dssp_info
     ]
