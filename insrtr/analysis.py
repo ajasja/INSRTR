@@ -81,23 +81,27 @@ import pandas as pd
 
 
 class LoopAnalyzer:
-    def __init__(self, struct_file_path, struct_name=None):
+    def __init__(self, struct_file_path, struct_name=None, active_res_index1=None):
         self.struct_file_path = struct_file_path
 
-        if struct_name is None: #If no name given take it from the struct file
+        if struct_name is None:  # If no name given take it from the struct file
             struct_name = pathlib.Path(struct_file_path).stem
 
         self.struct_name = str(struct_name)
         self.traj = md.load(struct_file_path)
         self.topology = self.traj.topology
         self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
-        self.dssp = np.char.replace(self.dssp,'C','L')
+        self.dssp = np.char.replace(self.dssp, "C", "L")
         self.seq = "".join(resname_3to1([res.name for res in self.topology.residues]))
         self.loops = get_loops_from_annotation(self.dssp, loop_char="L", skip_ends=True)
         self.loops0 = loops_to_0_based(self.loops)
         self.sasa_atoms_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
         self.total_sasa_A = sum(self.sasa_atoms_A)
         self.residue_features_table = None
+        if active_res_index1:
+            self.active_res_index0 = [int(resid) - 1 for resid in active_res_index1]
+        else:
+            self.active_res_index0 = []
 
     _loop_features = []
     loop_feature_descriptions = {}
@@ -112,19 +116,17 @@ class LoopAnalyzer:
 
         self.get_resi_features()
 
-        resi_table=pd.DataFrame(self._resi_features)
-        loop_table=pd.DataFrame(self._loop_features)
-        self.residue_features_table=resi_table.merge(loop_table, on='loop_index0', how='left')
-        
+        resi_table = pd.DataFrame(self._resi_features)
+        loop_table = pd.DataFrame(self._loop_features)
+        self.residue_features_table = resi_table.merge(loop_table, on="loop_index0", how="left")
+
         # Merge the descriptions as well
         self.feature_descriptions_table = self.resi_feature_descriptions.copy()
         self.feature_descriptions_table.update(self.loop_feature_descriptions)
-        self.feature_descriptions_table=pd.DataFrame(self.feature_descriptions_table, index=['description'])
-        self.feature_descriptions_table=self.feature_descriptions_table.T
-
+        self.feature_descriptions_table = pd.DataFrame(self.feature_descriptions_table, index=["description"])
+        self.feature_descriptions_table = self.feature_descriptions_table.T
 
         return self.residue_features_table
-
 
     def get_loop_features(self):
         self._loop_features = []
@@ -226,19 +228,22 @@ class LoopAnalyzer:
         self._resi_features = []
         for li, loop in enumerate(self.loops0):
             for ri, resi in enumerate(loop):
-                self._resi_features.append(dict(struct_name=self.struct_name, resi_loop_index0=ri, loop_index0=li, resi_index0=resi))  # make new dict
+                self._resi_features.append(
+                    dict(struct_name=self.struct_name, resi_loop_index0=ri, loop_index0=li, resi_index0=resi)
+                )  # make new dict
                 if li == 0 and ri == 0:  # description need to be added on first pass only
                     self.resi_feature_descriptions["struct_name"] = "Name of the structure"
                     self.resi_feature_descriptions["resi_index0"] = "The zero based index of the residue."
-                    self.resi_feature_descriptions["resi_loop_index0"] = "The zero based index of the residue inside the loop."
+                    self.resi_feature_descriptions[
+                        "resi_loop_index0"
+                    ] = "The zero based index of the residue inside the loop."
                     self.resi_feature_descriptions["loop_index0"] = "The zero based index of the loop."
 
-                
                 for resi_analyzer in self._resi_analyzers:
                     res = resi_analyzer(self, li, ri, loop)
                     for f in res.keys():
                         # Add the values and descriptions to different lists
-                        # Append to the last 
+                        # Append to the last
                         self._resi_features[-1][f] = res[f][0]
                         if ri == 0:  # add the description if this is the first loop pass
                             self.resi_feature_descriptions[f] = res[f][1]
@@ -250,39 +255,42 @@ class LoopAnalyzer:
         # returns a set of frames, but we only have one frame, so [0] is needed
         resi_distance_to_N_term_A = md.compute_distances(self.traj, [[first_CA, residue_CA]])[0][0] * 10
         resi_distance_to_C_term_A = md.compute_distances(self.traj, [[last_CA, residue_CA]])[0][0] * 10
-        
+
         return dict(
-            resi_distance_to_N_term_A=(resi_distance_to_N_term_A, "distance of residue CA atom to start of loop (N_term first residue of loop) in Angstrom"),
+            resi_distance_to_N_term_A=(
+                resi_distance_to_N_term_A,
+                "distance of residue CA atom to start of loop (N_term first residue of loop) in Angstrom",
+            ),
             resi_distance_to_C_term_A=(
                 resi_distance_to_C_term_A,
-                "distance of residue CA atom to end of loop (C_term last residue of loop) in Angstrom")
+                "distance of residue CA atom to end of loop (C_term last residue of loop) in Angstrom",
+            ),
         )
 
     def get_resi_seq_features(self, loop_index0, resi_loop_index0, loop_residues):
         resi_index0 = loop_residues[resi_loop_index0]
 
-        prev_resi_index0 = resi_index0-1
-        next_resi_index0 = resi_index0+1
+        prev_resi_index0 = resi_index0 - 1
+        next_resi_index0 = resi_index0 + 1
 
-        
         resi_type = self.seq[resi_index0]
         resi_dssp = self.dssp[resi_index0]
 
-        if prev_resi_index0 >= 0:   
+        if prev_resi_index0 >= 0:
             prev_resi_type = self.seq[prev_resi_index0]
             prev_resi_dssp = self.dssp[prev_resi_index0]
 
-        if next_resi_index0 < self.topology.n_residues: 
+        if next_resi_index0 < self.topology.n_residues:
             next_resi_type = self.seq[next_resi_index0]
             next_resi_dssp = self.dssp[next_resi_index0]
-    
+
         return dict(
             resi_type=(resi_type, "Residue type"),
             resi_dssp=(resi_dssp, "Residue secondary structure"),
             prev_resi_type=(prev_resi_type, "Type of previous residue"),
             prev_resi_dssp=(prev_resi_dssp, "Secondary structure of previous residue"),
             next_resi_type=(next_resi_type, "Type of next residue"),
-            next_resi_dssp=(next_resi_dssp, "Secondary structure of next residue")
+            next_resi_dssp=(next_resi_dssp, "Secondary structure of next residue"),
         )
 
     def get_resi_sasa(self, loop_index0, resi_loop_index0, loop_residues):
@@ -291,16 +299,18 @@ class LoopAnalyzer:
         resi_atoms = self.topology.select(f"resid {resi_index0}")
 
         resi_sasa_A = sum(self.sasa_atoms_A[resi_atoms])  # get sasa just for residue
-        
 
         # get SASA if residue  was on it's own, without the rest of the protein
         resi_isolation_traj = self.traj.atom_slice(resi_atoms)
         resi_isolation_SASA_A = sum(md.shrake_rupley(resi_isolation_traj)[0] * 100)  # make in in angstrom
         resi_burial_percent = (1 - resi_sasa_A / resi_isolation_SASA_A) * 100
-        resi_percent_of_total_surface = resi_sasa_A /self.total_sasa_A* 100
+        resi_percent_of_total_surface = resi_sasa_A / self.total_sasa_A * 100
 
         return dict(
-            resi_sasa_A=(resi_sasa_A, "Surface accessible area of residue in A**2 in the context of the protein"),
+            resi_sasa_A=(
+                resi_sasa_A,
+                "Surface accessible area of residue in A**2 in the context of the protein",
+            ),
             resi_isolation_SASA_A=(
                 resi_isolation_SASA_A,
                 "Surface accessible area of residue in A**2 in in isolation",
@@ -315,6 +325,41 @@ class LoopAnalyzer:
             ),
         )
 
+    def get_distances(self, resid0, target_resids0):
+        """Returns an array of CA distances to resid0"""
+        residue_CA = self.topology.select(f"resid {resid0} and name CA")[0]
+        targets = [
+            atom.index
+            for atom in self.topology.atoms
+            if ((atom.residue.index in target_resids0) and (atom.name == "CA"))
+        ]
 
-    _resi_analyzers = [get_resi_geometry, get_resi_seq_features, get_resi_sasa]
-    
+        pairs = [(residue_CA, target) for target in targets]
+        dists_A = md.compute_distances(self.traj, pairs)[0] * 10
+        return dists_A
+
+    def get_active_res_info(self, loop_index0, resi_loop_index0, loop_residues):
+        if not self.active_res_index0:
+            return dict()
+        resi_index0 = loop_residues[resi_loop_index0]
+        dists = self.get_distances(resi_index0, self.active_res_index0)
+        resi_active_site_dist_min_A = np.min(dists)
+        resi_active_site_dist_avg_A = np.average(dists)
+        resi_active_site_dist_max_A = np.min(dists)
+
+        return dict(
+            resi_active_site_dist_min_A=(
+                resi_active_site_dist_min_A,
+                "Minimum distance to one of the active site residues in A",
+            ),
+            resi_active_site_dist_avg_A=(
+                resi_active_site_dist_avg_A,
+                "Average distance to the active site residues in A",
+            ),
+            resi_active_site_dist_max_A=(
+                resi_active_site_dist_max_A,
+                "Maximum distance to one of the active site residues in A",
+            ),
+        )
+
+    _resi_analyzers = [get_resi_geometry, get_resi_seq_features, get_resi_sasa, get_active_res_info]
