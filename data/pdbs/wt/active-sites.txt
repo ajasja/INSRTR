@@ -1,0 +1,10 @@
+Bgal (pdb6X1Q) – Glu460, Glu536 (in seq).
+LCK (AF2) – Asp364 .... pdb1QPC – 231-509(end), but not whole sequence.. Asp364 in pdb!.
+MyD88 - /
+IRAK(AF2) – Asp340 ....pdb6BFN - 194-530(end), not whole sequence... 340 in pdb!.
+TEVp - His46, Asp81 and Cys151.
+Cas9 - /.
+TALE - /.
+scFV - /.
+ngGFP - /.
+fLUC (1BA3) – Lys204, Glu344, Asp422.
