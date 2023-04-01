@@ -45,7 +45,7 @@ def load_model(filename):
     return model
 
 
-def predict_positions(df, model_path='models/classifier_v1.pkl'):
+def predict_positions(df, model_path='models/gbt_classifier_v1.pkl'):
     """
     Loads the model and applies it to the input dataframe.
     Takes into account only the positive predictions.
