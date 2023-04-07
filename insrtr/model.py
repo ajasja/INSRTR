@@ -56,7 +56,7 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3):
     """
     Loads the model and applies it to the input dataframe.
     Takes into account only the positive predictions.
-    Only the highest probability prediction for each resi_index0 is considered.
+    Only the highest probability prediction for each loop_index0 is considered.
 
     Parameters
     ----------
@@ -84,8 +84,8 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3):
     df_positive = df[prediction_label == "Y"].rename(columns={"probability_Y": "prediction_probability"})
     # Create the output dataframes
     df_predictions = df_positive.loc[
-        df_positive.groupby("resi_index0")["prediction_probability"].idxmax().sample(frac=1, random_state=2),
-        ["resi_index0", "prediction_probability"],
+        df_positive.groupby("loop_index0")["prediction_probability"].idxmax().sample(frac=1, random_state=2),
+        ["resi_index0", "resi_dssp", "prediction_probability"],
     ].nlargest(n=n_top, columns=["prediction_probability"])
     return df_predictions, df
 
