@@ -75,7 +75,8 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, ex
     # recommended sites are resi_index0+1, so adjust active_sites_list
     exclude_resi_index1 = [element - 1 for element in exclude_resi_index1]
     # Preprocess the data - exclude active sites and encode categories
-    df.drop(df[df["resi_index0"].isin(exclude_resi_index1)].index, inplace=True)
+    if exclude_resi_index1:
+        df.drop(df[df["resi_index0"].isin(exclude_resi_index1)].index, inplace=True)
     x = encode_categories(pd.DataFrame(df.drop(columns=["struct_name"])), replace=True).values
     # Apply model to get labels and predicted probabilities
     prediction_label = model.predict(x)
