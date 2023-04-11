@@ -52,7 +52,7 @@ def load_model(filename):
     return model
 
 
-def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, active_sites_list=[]):
+def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, exclude_resi_index1=[]):
     """
     Loads the model and applies it to the input dataframe.
     Takes into account only the positive predictions.
@@ -63,7 +63,7 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, ac
     df: input dataframe
     model_path: path to trained model
     n_top: the number of to positions to return
-    active_sites_list: list of active sites - they should be excluded as predictions
+    exclude_resi_index1: list of resi indices that should be excluded as predictions (usually active site residues)
 
     Returns
     -------
@@ -73,9 +73,9 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, ac
     # Load the model
     model = load_model(model_path)
     # recommended sites are resi_index0+1, so adjust active_sites_list
-    active_sites_list = [element - 1 for element in active_sites_list]
+    exclude_resi_index1 = [element - 1 for element in exclude_resi_index1]
     # Preprocess the data - exclude active sites and encode categories
-    df.drop(df[df['resi_index0'].isin(active_sites_list)].index, inplace=True)
+    df.drop(df[df["resi_index0"].isin(exclude_resi_index1)].index, inplace=True)
     x = encode_categories(pd.DataFrame(df.drop(columns=["struct_name"])), replace=True).values
     # Apply model to get labels and predicted probabilities
     prediction_label = model.predict(x)
@@ -91,4 +91,3 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, ac
         ["resi_index0", "resi_dssp", "prediction_probability"],
     ].nlargest(n=n_top, columns=["prediction_probability"])
     return df_predictions, df
-
