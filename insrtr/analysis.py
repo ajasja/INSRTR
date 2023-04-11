@@ -6,6 +6,7 @@ import numpy as np
 import pathlib
 from collections import Counter
 import pandas as pd
+import itertools
 
 
 def get_loops_from_annotation(annot: str, min_length=2, skip_ends=True, loop_char="L"):
@@ -83,14 +84,22 @@ import pandas as pd
 
 
 class LoopAnalyzer:
-    def __init__(self, struct_file_path, struct_name=None, active_res_index1=None, always_include_sites1=None):
+    def __init__(
+        self,
+        struct_file_path,
+        struct_name=None,
+        active_res_index1=None,
+        always_include_sites1=None,
+        include_dssp="LHE",
+        skip_ends=True,
+    ):
         self.struct_file_path = struct_file_path
 
         if struct_name is None:  # If no name given take it from the struct file
             struct_name = pathlib.Path(struct_file_path).stem
 
         if always_include_sites1 is None:
-            always_include_sites1=[]
+            always_include_sites1 = []
 
         self.struct_name = str(struct_name)
         self.traj = md.load(struct_file_path)
@@ -98,9 +107,10 @@ class LoopAnalyzer:
         self.dssp = md.compute_dssp(self.traj, simplified=True)[0]
         self.dssp = np.char.replace(self.dssp, "C", "L")
         self.seq = "".join(resname_3to1([res.name for res in self.topology.residues]))
-        #self.loops = get_loops_from_annotation(self.dssp, loop_char="L", skip_ends=True) + always_include_sites1
-        self.loops = get_loops_from_annotation(self.dssp, loop_char="L", skip_ends=True) + get_loops_from_annotation(self.dssp, loop_char="H", skip_ends=True) + get_loops_from_annotation(self.dssp, loop_char="E", skip_ends=True)
-        #print(self.loops)
+        # self.loops = get_loops_from_annotation(self.dssp, loop_char="L", skip_ends=True) + always_include_sites1
+        loop_array = [get_loops_from_annotation(self.dssp, loop_char=dssp_char, skip_ends=skip_ends) for dssp_char in include_dssp]
+        self.loops = list(itertools.chain(*loop_array))
+        # print(self.loops)
         self.loops0 = loops_to_0_based(self.loops)
         self.sasa_atoms_A = md.shrake_rupley(self.traj)[0] * 100  # make in in angstrom
         self.total_sasa_A = sum(self.sasa_atoms_A)
@@ -401,16 +411,15 @@ class LoopAnalyzer:
             return dict()
         resi_index0 = loop_residues[resi_loop_index0]
         counts = []
-        #dssps = []
+        # dssps = []
         for target in self.active_res_index0:
             start, end = sorted((target, resi_index0))
-            dssp_subset = self.dssp[start+1:end]
-            #dssps.append()
-            counter = Counter(dssp_subset,  H=0, L=0, E=0) #init counts to 0
+            dssp_subset = self.dssp[start + 1 : end]
+            # dssps.append()
+            counter = Counter(dssp_subset, H=0, L=0, E=0)  # init counts to 0
             counts.append(counter)
 
         cdf = pd.DataFrame(counts)
-
 
         return dict(
             resi_active_site_num_H_min=(
@@ -450,10 +459,12 @@ class LoopAnalyzer:
                 "Maximum number of loop residues between this residue and one of the active site residues,",
             ),
         )
+
     _resi_analyzers = [
         get_resi_geometry,
         get_resi_seq_features,
         get_resi_sasa,
         get_active_geometry_res_info,
-        get_active_seq_res_info, get_resi_active_site_dssp_info
+        get_active_seq_res_info,
+        get_resi_active_site_dssp_info,
     ]

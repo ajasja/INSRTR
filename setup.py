@@ -11,7 +11,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 #requirements = ['py3dmol', 'ipywidgets', 'biopython' ]
-requirements = ['py3dmol', 'biopython' ] # deps can cause trouble in google colab install
+requirements = ['py3dmol', 'biopython', 'pandas', 'scikit-learn'] # deps can cause trouble in google colab install
 
 test_requirements = [ ]
 
@@ -42,6 +42,7 @@ setup(
     keywords='insrtr',
     name='insrtr',
     packages=find_packages(include=['insrtr', 'insrtr.*']),
+    package_data={'insrtr': ['models/*']},
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ajasja/insrtr',
