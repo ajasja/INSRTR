@@ -10,4 +10,4 @@ from .main import *
 from .analysis import * # is this best practice? A: You should import only the things you need
 from .model import predict_positions
 from .models import *
-MODEL_NAME = 'gbt_classifier_v1.pkl'
+MODEL_NAME = 'gbt_classifier_v2.pkl'

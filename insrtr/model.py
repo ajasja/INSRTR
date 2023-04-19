@@ -52,7 +52,7 @@ def load_model(filename):
     return model
 
 
-def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, exclude_resi_index1=[]):
+def predict_positions(df, model_path="models/gbt_classifier_v2.pkl", n_top=3, exclude_resi_index1=[]):
     """
     Loads the model and applies it to the input dataframe.
     Takes into account only the positive predictions.
@@ -72,7 +72,7 @@ def predict_positions(df, model_path="models/gbt_classifier_v1.pkl", n_top=3, ex
     """
     # Load the model
     model = load_model(model_path)
-    # recommended sites are resi_index0+1, so adjust active_sites_list
+    # recommended sites are resi_index0+1, so adjust exclude_resi_index1
     exclude_resi_index1 = [element - 1 for element in exclude_resi_index1]
     # Preprocess the data - exclude active sites and encode categories
     if exclude_resi_index1:
