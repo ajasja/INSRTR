@@ -5,6 +5,6 @@ Regulation of the activity of proteins enables control of complex cellular proce
 
 This repository contains the code to predict optimal regulatory insertion sites. Structures containing regulatory coiled-coils are also predicted using AlphaFold2. The code is also available as a [colab notebook](INSRTR.ipynb). 
 
-For more information please see Plaper, Merljak, Fink et all: https://www.biorxiv.org/content/10.1101/2022.06.03.494683v1
+If you use this software please cite: **Plaper, Merljak, Fink et al, Cell Discovery, 2024**, https://www.nature.com/articles/s41421-023-00635-y
 
 
